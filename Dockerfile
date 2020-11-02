@@ -7,6 +7,7 @@ RUN sed -i '$ d' /start.sh
 RUN mkdir /var/reports/
 
 ADD entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 ADD scan.py /usr/local/share/gvm/scan.py
 
 VOLUME /var/reports/
