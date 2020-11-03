@@ -1,4 +1,4 @@
-FROM securecompliance/gvm:20.08-v1
+FROM securecompliance/gvm:20.08-v2
 
 # Remove last line so start.sh doesn't hang on tail -F
 # https://github.com/Secure-Compliance-Solutions-LLC/GVM-Docker/blob/master/scripts/start.sh

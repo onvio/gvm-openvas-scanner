@@ -71,6 +71,9 @@ config_id = scan_configs[options.scan_config.lower()]
 
 logging.info('Starting scan with config: {}'.format(config_id))
 
+configs_response = run_command("<get_configs />", "//get_configs_response")[0]
+logging.info("Available configs: {}".format(configs_response))
+
 create_target_sshcredential = ""
 if options.ssh_username:
     if options.ssh_password:
