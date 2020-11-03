@@ -108,7 +108,7 @@ report_id = run_command(start_task, "/start_task_response/report_id")[0].text
 logging.info("Started task with report: {}".format(report_id))
 
 status = ""
-while status != ("Done" or "Stopped"):
+while status != ("Done" or "Stopped" or "Interrupted"):
     try:
         status_command = "<get_tasks task_id=\"{}\"/>".format(task_id)
         status_response = run_command(status_command)
