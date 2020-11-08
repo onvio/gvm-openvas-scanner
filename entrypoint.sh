@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if  [ -d /data/database ]; then
+    su -c "/usr/lib/postgresql/12/bin/pg_resetwal -f /data/database" postgres
+fi
+
 /start.sh
 
 uuid=$(su -c "gvmd --get-users --verbose" gvm | sed 's/^.* //')

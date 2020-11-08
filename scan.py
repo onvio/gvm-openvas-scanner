@@ -1,13 +1,16 @@
 #!/usr/bin/python
 
+from gvm.connections import TLSConnection
+from gvm.protocols.gmp import Gmp
+from gvm.protocols.gmpv9 import AliveTest
+from gvm.protocols.gmpv9 import CredentialType
+from gvm.transforms import EtreeTransform
 import logging
 import os, sys, time, random
-import subprocess
 import optparse
 from lxml import etree
 from pathlib import Path
 import base64
-from subprocess import CalledProcessError
 
 parser = optparse.OptionParser()
 
@@ -15,139 +18,169 @@ parser.add_option('-n', '--no-ping',
     action="store_false", dest="consider_alive",
     help="Consider all hosts as alive", default=False)
 
-parser.add_option('-u', '--username',
+parser.add_option('--ssh-username',
     action="store", dest="ssh_username",
-    help="SSH Username", default="")
+    help="SSH Username", default=None)
 
-parser.add_option('-p', '--password',
+parser.add_option('--ssh-password',
     action="store", dest="ssh_password",
-    help="SSH Password", default="")
+    help="SSH Password", default=None)
 
-parser.add_option('-k', '--key',
-    action="store", dest="ssh_key",
-    help="SSH Private Key", default="")
+parser.add_option('--ssh-private-key',
+    action="store", dest="ssh_private_key",
+    help="SSH Private Key", default=None)
+
+parser.add_option('--ssh-key-phrase',
+    action="store", dest="ssh_private_key_phrase",
+    help="SSH Private Key Phrase", default=None)
+
+parser.add_option('--ssh-port',
+    action="store", dest="ssh_port",
+    help="SSH Port", default=22)
 
 parser.add_option('-s', '--scan_config',
     action="store", dest="scan_config",
-    help="Scan Configuration, Basic or Full", default="basic")
+    help="Scan Configuration, Base or Full and fast", default="Base")
 
 parser.add_option('-l', '--loglevel',
     action="store", dest="loglevel",
     help="Set loglevel", default="INFO")
 
 options, args = parser.parse_args()
+logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', datefmt='[%Y-%m-%d %H:%M:%S]', level=options.loglevel.upper())
 
-if len(sys.argv) < 3:
+if len(args) != 2:
     logging.error('Usage: %s <scan targets> <output file>\r\nUse -h or --help to view options' % sys.argv[0])
     sys.exit()
 
 hosts = args[0]
 outputfile = args[1]
 
-logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d,%H:%M:%S', level=options.loglevel.upper())
+logging.info('Hosts: {}'.format(hosts))
+logging.info('Outputfile: {}'.format(outputfile))
 
-def run_command(xml: str, xpath: str = ""):
-    gvm_logon = "gvm-cli --gmp-username admin --gmp-password admin tls --hostname 127.0.0.1"
-    command = "{} --xml '{}'".format(gvm_logon, xml)
-    logging.debug("command: {}".format(command))
-    command_result = ""
-    try:
-        command_response = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True)
-        logging.debug("command_response: {}".format(command_response[:2000]))
-        command_result = etree.XML(command_response)
-        if xpath:
-            command_result = command_result.xpath(xpath)
-        logging.debug("command_result: {}".format(command_result[:2000]))
-    except CalledProcessError as exc:
-        logging.error(exc.output)
-    return command_result
+connection = TLSConnection()
+transform = EtreeTransform()
 
-scan_configs = {
-    "basic": "d21f6c81-2b88-4ac1-b7b4-a2a9f2ad4663",
-    "full": "daba56c8-73ec-11df-a475-002264764cea"
-}
+logging.info('Connecting to GMP')
 
-config_id = scan_configs[options.scan_config.lower()]
+with Gmp(connection, transform=transform) as gmp:
+    gmp.authenticate('admin', 'admin')
+    logging.info('Authenticated')
 
-logging.info('Starting scan with config: {}'.format(config_id))
+    # Get the base config based on the provided name
+    base_config = gmp.get_configs(filter="name=\"{}\"".format(options.scan_config))
+    config_exists = len(base_config.xpath("//config")) == 1
+    if not config_exists:
+        logging.error('Selected config "%s" does not exist' % options.scan_config)
+        sys.exit()
+    base_config_id = base_config.xpath("//config")[0].get("id")
 
-configs_response = run_command("<get_configs />", "//get_configs_response")[0]
-logging.info("Available configs: {}".format(configs_response))
+    # Create a custom config and change some settings, because gmp.set_nvt_preference does not work.
+    custom_config_name = "{} - CUSTOM".format(options.scan_config)
+    custom_config = gmp.get_configs(filter="name=\"{}\"".format(custom_config_name))
+    custom_config_exists = len(custom_config.xpath("//config")) == 1
 
-create_target_sshcredential = ""
-if options.ssh_username:
-    if options.ssh_password:
-        creds_key = "<password>{}</password>".format(options.ssh_password)
-    elif options.ssh_key:
-        creds_key = "<key><private>{}</private></key>".format(options.ssh_key)
+    if not custom_config_exists:
+        logging.info('Cloning from config: {}'.format(base_config_id))
+        config_import = etree.tostring(base_config).decode('utf-8')
+        config_import = config_import.replace('<name>{}</name>'.format(options.scan_config), '<name>{}</name>'.format(custom_config_name))
+        config_import = config_import.replace('<name>Do a TCP ping</name><type>checkbox</type><value>no</value>', '<name>Do a TCP ping</name><type>checkbox</type><value>yes</value>')
+        config_import = config_import.replace('<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>no</value>', '<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>yes</value>')
+        import_config = gmp.import_config(config=config_import)
+        config_id = import_config[0].get("id")
     else:
-        logging.error("No SSH Password or Private Key provided.")
-        sys.exit("No SSH Password or Private Key provided.")
+        config_id = custom_config.xpath("//config")[0].get("id")
 
-    create_credential = "<create_credential><name>Credentials-{}</name><login>{}</login>{}</create_credential>".format(random.randint(1,99999), options.ssh_username, creds_key)
-    credential_id = run_command(create_credential, "//create_credential_response")[0].get("id")
-    logging.info("Created credential: {}".format(credential_id))
-    create_target_sshcredential = "<ssh_credential id=\"{}\"><port>22</port></ssh_credential>".format(credential_id)
+    logging.info('Starting scan with config: {}'.format(config_id))
 
-alive_tests = "<alive_tests>ICMP, TCP-ACK Service &amp; ARP Ping</alive_tests>"
-if options.consider_alive:
-    alive_tests = "<alive_tests>Consider Alive</alive_tests>"
+    if options.ssh_username:
+        if not options.ssh_password and not options.ssh_private_key:
+            logging.error("SSH Username is provided, but no password or private key.")
+            sys.exit()
 
-# 33d0cd82-57c6-11e1-8ed1-406186ea4fc5 = All IANA assigned TCP
+        credential_name = "Credentials-{}".format(random.randint(1,99999))
+        create_credential = gmp.create_credential(name=credential_name,
+                                credential_type=CredentialType.USERNAME_PASSWORD,
+                                allow_insecure=True,
+                                login=options.ssh_username,
+                                password=options.ssh_password,
+                                private_key=options.ssh_private_key,
+                                key_phrase=options.ssh_private_key_phrase)
 
-create_target = "<create_target><name>scan-{0}</name><hosts>{1}</hosts><port_list id=\"33d0cd82-57c6-11e1-8ed1-406186ea4fc5\" />{2}{3}</create_target>".format(random.randint(1,99999), hosts, alive_tests, create_target_sshcredential)
-target_id = run_command(create_target, "//create_target_response")[0].get("id")
-logging.info("Created target: {}".format(target_id))
+        credential_id = create_credential.xpath("//create_credential_response")[0].get("id")
+        logging.info("Created credential: {}".format(credential_id))
 
-create_task = "<create_task><name>Scan Suspect Host</name><target id=\"{}\"></target><config id=\"{}\"></config></create_task>".format(target_id, config_id)
-task_id = run_command(create_task, "//create_task_response")[0].get("id")
-logging.info("Created task: {}".format(task_id))
+    # Bug in GVM, this does not work
+    alive_tests = AliveTest.ICMP_AND_TCP_ACK_SERVICE_PING
+    if options.consider_alive:
+        alive_tests = AliveTest.CONSIDER_ALIVE
+    port_list_id = "33d0cd82-57c6-11e1-8ed1-406186ea4fc5" # All IANA assigned TCP
+    scan_name = "scan-{}".format(random.randint(1,99999))
+    host_list = hosts.split(",")
 
-start_task = "<start_task task_id=\"{}\"/>".format(task_id)
-report_id = run_command(start_task, "/start_task_response/report_id")[0].text
-logging.info("Started task with report: {}".format(report_id))
+    create_target = gmp.create_target(name = scan_name,
+                                        hosts = host_list, 
+                                        alive_test = alive_tests, 
+                                        port_list_id=port_list_id, 
+                                        ssh_credential_port=options.ssh_port)
+    target_id = create_target.xpath("//create_target_response")[0].get("id")
+    logging.info("Created target: {}".format(target_id))
 
-status = ""
-while status != ("Done" or "Stopped" or "Interrupted"):
-    try:
-        status_command = "<get_tasks task_id=\"{}\"/>".format(task_id)
-        status_response = run_command(status_command)
-        status = status_response.xpath("//status")[0].text
-        progress = status_response.xpath("//progress")[0].text
+    default_scanner_id = "08b69003-5fc2-4037-a479-93b440211c73" # OpenVAS Default Scanner
+    create_task = gmp.create_task(name = scan_name, 
+                                    scanner_id = default_scanner_id, 
+                                    config_id = config_id, 
+                                    target_id = target_id)
+    task_id = create_task.xpath("//create_task_response")[0].get("id")
+    logging.info("Created task: {}".format(task_id))
+
+    start_task = gmp.start_task(task_id = task_id)
+    report_id = start_task.xpath("/start_task_response/report_id")[0].text
+    logging.info("Started task with report: {}".format(report_id))
+
+    progress = 0
+    while progress != -1:
+        get_task = gmp.get_task(task_id = task_id)
+        status = get_task.xpath("//status")[0].text
+        progress = int(get_task.xpath("//progress")[0].text)
         logging.info("Progress: {} {}%".format(status, progress))
         time.sleep(10)
-    except subprocess.CalledProcessError as exc:
-        logging.error(exc.output)
-
-openvaslog = open("/usr/local/var/log/gvm/openvas.log", "r").read()
-logging.debug("openvas.log: {}".format(openvaslog))
-    
-report_formats = [("pdf", "c402cc3e-b531-11e1-9163-406186ea4fc5"), ("xml", "a994b278-1f62-11e1-96ac-406186ea4fc5")]
-
-for report_format, report_format_id in report_formats:
-    logging.info("Building report: {}".format(report_format))
-
-    report_filename = os.path.split(outputfile)[1]
-    export_path = "/var/reports/{}.{}".format(report_filename, report_format)
-    get_report_command = "<get_reports report_id=\"{}\" format_id=\"{}\" filter=\"first=1 rows=-1 apply_overrides=1 levels=hmlg sort-reverse=severity\" details=\"1\" />".format(report_id, report_format_id)
 
     try:
-        if report_format == "pdf":
-            report_content = run_command(get_report_command, "//report[@id='{}']/text()".format(report_id))[0]
-            binary_base64_encoded_pdf = report_content.encode('ascii')
-            binary_pdf = base64.b64decode(binary_base64_encoded_pdf)
-            pdf_path = Path(export_path).expanduser()
-            pdf_path.write_bytes(binary_pdf)
+        openvaslog = open("/usr/local/var/log/gvm/openvas.log", "r").read()
+        logging.debug("openvas.log: {}".format(openvaslog))
+    except FileNotFoundError as ex:
+        logging.error(ex)
+        
+    report_formats = [("pdf", "c402cc3e-b531-11e1-9163-406186ea4fc5"), ("xml", "a994b278-1f62-11e1-96ac-406186ea4fc5")]
+
+    for report_format, report_format_id in report_formats:
+        logging.info("Building report: {}".format(report_format))
+
+        report_filename = os.path.split(outputfile)[1]
+        export_path = "/var/reports/{}.{}".format(report_filename, report_format)
+        get_report = gmp.get_report(report_id = report_id, 
+                                    report_format_id=report_format_id, 
+                                    details=True, 
+                                    ignore_pagination=True)
+
+        try:
+            if report_format == "pdf":
+                report_content = get_report.xpath("//report[@id='{}']/text()".format(report_id))[0]
+                binary_base64_encoded_pdf = report_content.encode('ascii')
+                binary_pdf = base64.b64decode(binary_base64_encoded_pdf)
+                pdf_path = Path(export_path).expanduser()
+                pdf_path.write_bytes(binary_pdf)
+            if report_format == "xml":
+                report_content = get_report.xpath("(//report[@id='{}'])[2]".format(report_id))[0]
+                report_content = etree.tostring(report_content).decode('utf-8')
+                f = open(export_path, 'w')
+                f.write(report_content)
+                f.close()
+
             logging.info("Written {} report to: {}".format(report_format.upper(), export_path))
-        if report_format == "xml":
-            report_content = run_command(get_report_command, "(//report[@id='{}'])[2]".format(report_id))[0]
-            report_content = etree.tostring(report_content).decode('utf-8')
-            f = open(export_path, 'w')
-            f.write(report_content)
-            f.close()
-            logging.info("Written {} report to: {}".format(report_format.upper(), export_path))
-    except Exception as e:
-        logging.error(get_report_command)
-        logging.error(e.output)
+        except Exception as e:
+            logging.error(e.output)
 
 logging.info("Done!")
