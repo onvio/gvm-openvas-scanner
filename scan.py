@@ -69,7 +69,7 @@ with Gmp(connection, transform=transform) as gmp:
     logging.info('Authenticated')
 
     # Get the base config based on the provided name
-    base_config = gmp.get_configs(filter="name=\"{}\"".format(options.scan_config))
+    base_config = gmp.get_configs(filter="name=\"{}\"".format(options.scan_config),details=True)
     config_exists = len(base_config.xpath("//config")) == 1
     if not config_exists:
         logging.error('Selected config "%s" does not exist' % options.scan_config)
