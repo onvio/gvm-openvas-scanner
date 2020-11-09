@@ -5,13 +5,37 @@ Thanks to [Secure-Compliance](https://github.com/Secure-Compliance-Solutions-LLC
 
 # Usage
 Run:
-```docker run --rm -v /var/gvm-data:/data -v /opt/gvm-reports:/var/reports onvio/gvm-openvas-scanner www.mydomain.com report```
+```docker run --rm -v /var/gvm-data:/data -v /var/gvm-reports:/var/reports onvio/gvm-openvas-scanner www.mydomain.com,api.mydomain.com myreport```
+
+Two report formats will be generated in /var/gvm-reports:
+* myreport.xml
+* myreport.pdf
 
 Help:
-```docker run --rm -v /var/gvm-data:/data -v /opt/gvm-reports:/var/reports onvio/gvm-openvas-scanner -h```
+```
+Usage: scan.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -n, --no-ping         Consider all hosts as alive
+  --ssh-username=SSH_USERNAME
+                        SSH Username
+  --ssh-password=SSH_PASSWORD
+                        SSH Password
+  --ssh-private-key=SSH_PRIVATE_KEY
+                        SSH Private Key
+  --ssh-key-phrase=SSH_PRIVATE_KEY_PHRASE
+                        SSH Private Key Phrase
+  --ssh-port=SSH_PORT   SSH Port
+  -s SCAN_CONFIG, --scan_config=SCAN_CONFIG
+                        Scan Configuration, Base or Full and fast
+  -l LOGLEVEL, --loglevel=LOGLEVEL
+                        Set loglevel
+```
 
 To access the webinterface run, for example to debug the scans:
-```docker run --rm -p 9392:9392 -v /var/gvm-data:/data -v /opt/gvm-reports:/var/reports onvio/gvm-openvas-scanner www.mydomain.com report```
-*Warning* the user created is admin/admin so beware when you expose the webinterface.
-
-You can find the PDF and XML report on your machine in `/opt/gvm-reports`
+```docker run --rm -p 9392:9392 -p 9390:9390 -p 5432:5432 -v /var/gvm-data:/data -v /var/gvm-reports:/var/reports onvio/gvm-openvas-scanner www.mydomain.com myreport```
+* 9392 = Web interface
+* 9390 = GMP Protocol for scanscript
+* 5432 = Postgres database
+*Warning* the user created is admin/admin so beware when you expose ports. The database uses default credentials as well.

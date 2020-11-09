@@ -12,7 +12,8 @@ from lxml import etree
 from pathlib import Path
 import base64
 
-parser = optparse.OptionParser()
+usage = "usage: %prog [options] hosts reportname"
+parser = optparse.OptionParser(usage)
 
 parser.add_option('-n', '--no-ping',
     action="store_false", dest="consider_alive",
@@ -50,7 +51,7 @@ options, args = parser.parse_args()
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', datefmt='[%Y-%m-%d %H:%M:%S]', level=options.loglevel.upper())
 
 if len(args) != 2:
-    logging.error('Usage: %s <scan targets> <output file>\r\nUse -h or --help to view options' % sys.argv[0])
+    parser.print_help()
     sys.exit()
 
 hosts = args[0]
@@ -85,6 +86,7 @@ with Gmp(connection, transform=transform) as gmp:
         logging.info('Cloning from config: {}'.format(base_config_id))
         config_import = etree.tostring(base_config).decode('utf-8')
         config_import = config_import.replace('<name>{}</name>'.format(options.scan_config), '<name>{}</name>'.format(custom_config_name))
+        # Enable TCP-SYN ping to check alive hosts
         config_import = config_import.replace('<name>Do a TCP ping</name><type>checkbox</type><value>no</value>', '<name>Do a TCP ping</name><type>checkbox</type><value>yes</value>')
         config_import = config_import.replace('<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>no</value>', '<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>yes</value>')
         import_config = gmp.import_config(config=config_import)
@@ -111,7 +113,7 @@ with Gmp(connection, transform=transform) as gmp:
         credential_id = create_credential.xpath("//create_credential_response")[0].get("id")
         logging.info("Created credential: {}".format(credential_id))
 
-    # Bug in GVM, this does not work
+    # Bug in GVM, this does not work, patched but no released https://github.com/greenbone/ospd-openvas/pull/334
     alive_tests = AliveTest.ICMP_AND_TCP_ACK_SERVICE_PING
     if options.consider_alive:
         alive_tests = AliveTest.CONSIDER_ALIVE
@@ -180,7 +182,7 @@ with Gmp(connection, transform=transform) as gmp:
                 f.close()
 
             logging.info("Written {} report to: {}".format(report_format.upper(), export_path))
-        except Exception as e:
-            logging.error(e.output)
+        except Exception as ex:
+            logging.error(ex)
 
 logging.info("Done!")

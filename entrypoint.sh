@@ -1,14 +1,14 @@
 #!/bin/bash
 
+# Try to fix the database if corrupted
 if  [ -d /data/database ]; then
     su -c "/usr/lib/postgresql/12/bin/pg_resetwal -f /data/database" postgres
 fi
 
+# Force the start script to create a user on each run
+rm -rf /data/created_gvm_user
+
 /start.sh
-
-uuid=$(su -c "gvmd --get-users --verbose" gvm | sed 's/^.* //')
-
-su -c "gvmd --modify-setting 78eceaec-3385-11ea-b237-28d24461215b --value $uuid" gvm
 
 chown gvm:gvm -R /var/reports/
 
