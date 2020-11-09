@@ -5,6 +5,7 @@ FROM securecompliance/gvm:20.08-v2
 #RUN sed -i '$ d' /start.sh
 
 ADD start.sh /start.sh
+RUN chmod +x /start.sh
 
 RUN mkdir /var/reports/
 RUN python3 -m pip install python-gvm
