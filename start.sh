@@ -115,6 +115,8 @@ if [ ! -f "/data/firstrun" ]; then
 	touch /data/firstrun
 fi
 
+su -c "psql --dbname=gvmd --command='TRUNCATE TABLE \"tasks\" CASCADE;'" postgres
+
 su -c "gvmd --migrate" gvm
 
 if [ $DB_PASSWORD != "none" ]; then
@@ -222,8 +224,6 @@ if [ ! -h /usr/local/var/lib/gvm/data-objects ]; then
 	
 	rm -rf /usr/local/var/lib/gvm/data-objects
 	
-	#mkdir -p /usr/local/var/lib/gvm/data-objects
-	
 	ln -s /data/data-objects /usr/local/var/lib/gvm/data-objects
 	
 	chown gvm:gvm -R /data/data-objects
@@ -267,7 +267,7 @@ rm -rf /tmp/ospd.sock
 ln -s /var/run/ospd/ospd.sock /tmp/ospd.sock
 
 echo "Starting Greenbone Vulnerability Manager..."
-su -c "gvmd --listen=127.0.0.1 --port=9390" gvm
+su -c "gvmd --listen=0.0.0.0 --port=9390" gvm
 
 echo "Waiting for Greenbone Vulnerability Manager to finish startup..."
 until su -c "gvmd --get-users" gvm; do

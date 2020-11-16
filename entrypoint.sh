@@ -4,6 +4,8 @@ if  [ -d /data/database ]; then
     su -c "/usr/lib/postgresql/12/bin/pg_resetwal -f /data/database" postgres
 fi
 
+rm -rf /data/certs/
+
 /start.sh
 
 config_exists=""
