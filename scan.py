@@ -96,6 +96,7 @@ with Gmp(connection, transform=transform) as gmp:
 
     logging.info('Starting scan with config: {}'.format(config_id))
 
+    credential_id = None
     if options.ssh_username:
         if not options.ssh_password and not options.ssh_private_key:
             logging.error("SSH Username is provided, but no password or private key.")
