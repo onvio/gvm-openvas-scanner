@@ -188,6 +188,7 @@ with Gmp(connection, transform=transform) as gmp:
     # Cleanup
     gmp.delete_task(task_id = task_id, ultimate=True)
     gmp.delete_target(target_id = target_id, ultimate=True)
+    gmp.delete_report(report_id = report_id)
     if credential_id:
         gmp.delete_credential(credential_id = credential_id, ultimate=True)
 
