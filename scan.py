@@ -185,4 +185,10 @@ with Gmp(connection, transform=transform) as gmp:
         except Exception as ex:
             logging.error(ex)
 
+    # Cleanup
+    gmp.delete_task(task_id = task_id, ultimate=True)
+    gmp.delete_target(target_id = target_id, ultimate=True)
+    if credential_id:
+        gmp.delete_credential(credential_id = credential_id, ultimate=True)
+
 logging.info("Done!")
