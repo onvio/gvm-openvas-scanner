@@ -126,7 +126,8 @@ with Gmp(connection, transform=transform) as gmp:
                                         hosts = host_list, 
                                         alive_test = alive_tests, 
                                         port_list_id=port_list_id, 
-                                        ssh_credential_port=options.ssh_port)
+                                        ssh_credential_port=options.ssh_port,
+                                        ssh_credential_id=credential_id)
     target_id = create_target.xpath("//create_target_response")[0].get("id")
     logging.info("Created target: {}".format(target_id))
 
