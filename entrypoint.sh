@@ -1,12 +1,21 @@
 #!/bin/bash
 
-if  [ -d /data/database ]; then
-    su -c "/usr/lib/postgresql/12/bin/pg_resetwal -f /data/database" postgres
-fi
-
+rm /usr/local/var/postgres/postmaster.pid
 rm -rf /data/certs/
 
 /start.sh
+
+status=$?
+if [ $status -ne 0 ]; then
+    echo "Startup script failed... try again"
+    /start.sh
+        
+    status=$?
+    if [ $status -ne 0 ]; then
+        echo "Startup script failed again, exiting"
+        exit 1
+    fi
+fi
 
 config_exists=""
 while [ -z "$config_exists" ]; do
@@ -21,4 +30,4 @@ echo "Scan configs are imported, running scanscript"
 chown gvm:gvm -R /var/reports/
 
 args="$@"
-su -c "python3 /usr/local/share/gvm/scan.py $args" gvm
+su -c "python3 /scan.py $args" gvm

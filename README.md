@@ -5,7 +5,8 @@ Thanks to [Secure-Compliance](https://github.com/Secure-Compliance-Solutions-LLC
 
 # Usage
 Run:
-```docker run --rm -v /var/gvm-data:/data -v /var/gvm-reports:/var/reports onvio/gvm-openvas-scanner www.mydomain.com,api.mydomain.com myreport```
+
+```docker run --rm -v gvm-data:/data -v /var/gvm-reports:/var/reports onvio/gvm-openvas-scanner www.mydomain.com,api.mydomain.com myreport```
 
 Two report formats will be generated in /var/gvm-reports:
 * myreport.xml
@@ -34,8 +35,10 @@ Options:
 ```
 
 To access the webinterface run, for example to debug the scans:
-```docker run --rm -p 9392:9392 -p 9390:9390 -p 5432:5432 -v /var/gvm-data:/data -v /var/gvm-reports:/var/reports onvio/gvm-openvas-scanner www.mydomain.com myreport```
+
+```docker run --rm -p 9392:9392 -p 9390:9390 -p 5432:5432 --entrypoint /start.sh -v gvm-data:/data -v /var/gvm-reports:/var/reports onvio/gvm-openvas-scanner```
 * 9392 = Web interface
 * 9390 = GMP Protocol for scanscript
 * 5432 = Postgres database
+
 *Warning* the user created is admin/admin so beware when you expose ports. The database uses default credentials as well.

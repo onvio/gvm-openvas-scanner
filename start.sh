@@ -115,8 +115,6 @@ if [ ! -f "/data/firstrun" ]; then
 	touch /data/firstrun
 fi
 
-#su -c "psql --dbname=gvmd --command='TRUNCATE TABLE \"tasks\" CASCADE;'" postgres
-
 su -c "gvmd --migrate" gvm
 
 if [ $DB_PASSWORD != "none" ]; then
