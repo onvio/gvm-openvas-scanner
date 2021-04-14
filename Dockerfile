@@ -1,4 +1,4 @@
-FROM securecompliance/gvm:20.08-v2
+FROM securecompliance/gvm:20.8.1-v1
 
 ENV TZ="Europe/Amsterdam"
 

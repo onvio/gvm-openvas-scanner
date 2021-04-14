@@ -39,7 +39,7 @@ parser.add_option('--ssh-port',
     action="store", dest="ssh_port",
     help="SSH Port", default=22)
 
-parser.add_option('-s', '--scan_config',
+parser.add_option('-s', '--scan-config',
     action="store", dest="scan_config",
     help="Scan Configuration, Base or Full and fast", default="Base")
 
