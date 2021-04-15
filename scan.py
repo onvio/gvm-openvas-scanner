@@ -79,16 +79,19 @@ with Gmp(connection, transform=transform) as gmp:
 
     # Create a custom config and change some settings, because gmp.set_nvt_preference does not work.
     custom_config_name = "{} - CUSTOM".format(options.scan_config)
-    custom_config = gmp.get_configs(filter="name=\"{}\"".format(custom_config_name))
-    custom_config_exists = len(custom_config.xpath("//config")) == 1
+    custom_config = gmp.get_configs(filter="name=\"{}\"".format(custom_config_name), details=True)
+    # always import a new config
+    custom_config_exists = False #len(custom_config.xpath("//config")) == 1
 
     if not custom_config_exists:
         logging.info('Cloning from config: {}'.format(base_config_id))
         config_import = etree.tostring(base_config).decode('utf-8')
+        logging.debug("config_import: {}".format(config_import))
         config_import = config_import.replace('<name>{}</name>'.format(options.scan_config), '<name>{}</name>'.format(custom_config_name))
         # Enable TCP-SYN ping to check alive hosts
         config_import = config_import.replace('<name>Do a TCP ping</name><type>checkbox</type><value>no</value>', '<name>Do a TCP ping</name><type>checkbox</type><value>yes</value>')
         config_import = config_import.replace('<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>no</value>', '<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>yes</value>')
+        logging.debug("modified config_import: {}".format(config_import))
         import_config = gmp.import_config(config=config_import)
         config_id = import_config[0].get("id")
     else:
@@ -130,6 +133,10 @@ with Gmp(connection, transform=transform) as gmp:
                                         ssh_credential_id=credential_id)
     target_id = create_target.xpath("//create_target_response")[0].get("id")
     logging.info("Created target: {}".format(target_id))
+    logging.info("Alive test: {}".format(alive_tests))
+    logging.info("Port list: {}".format(port_list_id))
+    logging.info("Scan name: {}".format(scan_name))
+    logging.info("Host list: {}".format(host_list))
 
     default_scanner_id = "08b69003-5fc2-4037-a479-93b440211c73" # OpenVAS Default Scanner
     create_task = gmp.create_task(name = scan_name, 
