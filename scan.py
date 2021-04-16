@@ -103,9 +103,10 @@ with Gmp(connection, transform=transform) as gmp:
         if options.consider_alive:
             config_import = config_import.replace('<name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>yes</value>', '<name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>no</value>')
  
+    logging.debug("modified config_import: {}".format(config_import))
+
     # Import the new custom config
     import_config = gmp.import_config(config=config_import)
-    logging.debug("modified config_import: {}".format(etree.tostring(import_config).decode('utf-8')))
     config_id = import_config[0].get("id")
 
     logging.info('Starting scan with config: {}'.format(config_id))
