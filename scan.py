@@ -79,23 +79,25 @@ with Gmp(connection, transform=transform) as gmp:
 
     # Create a custom config and change some settings, because gmp.set_nvt_preference does not work.
     custom_config_name = "{} - CUSTOM".format(options.scan_config)
-    custom_config = gmp.get_configs(filter="name=\"{}\"".format(custom_config_name), details=True)
-    # always import a new config
-    custom_config_exists = False #len(custom_config.xpath("//config")) == 1
+    
+    # Clone from the base config and make modifications
+    logging.info('Cloning from config: {}'.format(base_config_id))
+    config_import = etree.tostring(base_config).decode('utf-8')
+    logging.debug("original config_import: {}".format(config_import))
 
-    if not custom_config_exists:
-        logging.info('Cloning from config: {}'.format(base_config_id))
-        config_import = etree.tostring(base_config).decode('utf-8')
-        logging.debug("config_import: {}".format(config_import))
-        config_import = config_import.replace('<name>{}</name>'.format(options.scan_config), '<name>{}</name>'.format(custom_config_name))
-        # Enable TCP-SYN ping to check alive hosts
-        config_import = config_import.replace('<name>Do a TCP ping</name><type>checkbox</type><value>no</value>', '<name>Do a TCP ping</name><type>checkbox</type><value>yes</value>')
-        config_import = config_import.replace('<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>no</value>', '<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>yes</value>')
-        logging.debug("modified config_import: {}".format(config_import))
-        import_config = gmp.import_config(config=config_import)
-        config_id = import_config[0].get("id")
-    else:
-        config_id = custom_config.xpath("//config")[0].get("id")
+    # Enable TCP-SYN ping to check alive hosts
+    #gmp.modify_config_set_nvt_preference(config_id, "TCP ping tries also TCP-SYN ping", nvt_oid="1.3.6.1.4.1.25623.1.0.100315", value="no")
+    config_import = config_import.replace('<name>{}</name>'.format(options.scan_config), '<name>{}</name>'.format(custom_config_name))
+    config_import = config_import.replace('<name>Do a TCP ping</name><type>checkbox</type><value>no</value>', '<name>Do a TCP ping</name><type>checkbox</type><value>yes</value>')
+    config_import = config_import.replace('<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>no</value>', '<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>yes</value>')
+    config_import = config_import.replace('<name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value>', '<name>Report about unrechable Hosts</name><type>checkbox</type><value>yes</value>')
+    if options.consider_alive:
+        config_import = config_import.replace('<name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>yes</value>', '<name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>no</value>')
+ 
+    # Import the new custom config
+    import_config = gmp.import_config(config=config_import)
+    logging.debug("modified config_import: {}".format(etree.tostring(import_config).decode('utf-8')))
+    config_id = import_config[0].get("id")
 
     logging.info('Starting scan with config: {}'.format(config_id))
 
@@ -117,10 +119,11 @@ with Gmp(connection, transform=transform) as gmp:
         credential_id = create_credential.xpath("//create_credential_response")[0].get("id")
         logging.info("Created credential: {}".format(credential_id))
 
-    # Bug in GVM, this does not work, patched but no released https://github.com/greenbone/ospd-openvas/pull/334
-    alive_tests = AliveTest.ICMP_AND_TCP_ACK_SERVICE_PING
-    if options.consider_alive:
-        alive_tests = AliveTest.CONSIDER_ALIVE
+    # Bug in GVM, this does not work, patched but not released https://github.com/greenbone/ospd-openvas/pull/334
+    alive_tests = AliveTest.SCAN_CONFIG_DEFAULT
+    # alive_tests = AliveTest.ICMP_AND_TCP_ACK_SERVICE_PING
+    # if options.consider_alive:
+    #     alive_tests = AliveTest.CONSIDER_ALIVE
     port_list_id = "33d0cd82-57c6-11e1-8ed1-406186ea4fc5" # All IANA assigned TCP
     scan_name = "scan-{}".format(random.randint(1,99999))
     host_list = hosts.split(",")
@@ -195,6 +198,7 @@ with Gmp(connection, transform=transform) as gmp:
             logging.error(ex)
 
     # Cleanup
+    gmp.delete_config(config_id= config_id, ultimate=True)
     gmp.delete_task(task_id = task_id, ultimate=True)
     gmp.delete_target(target_id = target_id, ultimate=True)
     gmp.delete_report(report_id = report_id)
