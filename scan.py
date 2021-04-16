@@ -85,14 +85,23 @@ with Gmp(connection, transform=transform) as gmp:
     config_import = etree.tostring(base_config).decode('utf-8')
     logging.debug("original config_import: {}".format(config_import))
 
-    # Enable TCP-SYN ping to check alive hosts
-    #gmp.modify_config_set_nvt_preference(config_id, "TCP ping tries also TCP-SYN ping", nvt_oid="1.3.6.1.4.1.25623.1.0.100315", value="no")
     config_import = config_import.replace('<name>{}</name>'.format(options.scan_config), '<name>{}</name>'.format(custom_config_name))
-    config_import = config_import.replace('<name>Do a TCP ping</name><type>checkbox</type><value>no</value>', '<name>Do a TCP ping</name><type>checkbox</type><value>yes</value>')
-    config_import = config_import.replace('<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>no</value>', '<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>yes</value>')
-    config_import = config_import.replace('<name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value>', '<name>Report about unrechable Hosts</name><type>checkbox</type><value>yes</value>')
-    if options.consider_alive:
-        config_import = config_import.replace('<name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>yes</value>', '<name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>no</value>')
+
+    # Enable some checks to improve live host checks. Because this does not work:
+    # gmp.modify_config_set_nvt_preference(config_id, "TCP ping tries also TCP-SYN ping", nvt_oid="1.3.6.1.4.1.25623.1.0.100315", value="no")
+    if "<preferences/>" in config_import:
+        config_import = config_import.replace('<preferences/>', '<preferences></preferences>')
+        config_import = config_import.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>2</id><hr_name>TCP ping tries also TCP-SYN ping</hr_name><name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>yes</value><default>no</default></preference>')
+        config_import = config_import.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>1</id><hr_name>Do a TCP ping</hr_name><name>Do a TCP ping</name><type>checkbox</type><value>yes</value><default>no</default></preference>')
+        config_import = config_import.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>yes</value><default>no</default></preference>')
+        if options.consider_alive:
+            config_import = config_import.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>5</id><hr_name>Mark unrechable Hosts as dead (not scanning)</hr_name><name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>no</value><default>yes</default></preference>')
+    else:
+        config_import = config_import.replace('<name>Do a TCP ping</name><type>checkbox</type><value>no</value>', '<name>Do a TCP ping</name><type>checkbox</type><value>yes</value>')
+        config_import = config_import.replace('<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>no</value>', '<name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>yes</value>')
+        config_import = config_import.replace('<name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value>', '<name>Report about unrechable Hosts</name><type>checkbox</type><value>yes</value>')
+        if options.consider_alive:
+            config_import = config_import.replace('<name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>yes</value>', '<name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>no</value>')
  
     # Import the new custom config
     import_config = gmp.import_config(config=config_import)
