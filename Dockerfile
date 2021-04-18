@@ -6,7 +6,7 @@ ENV TZ="Europe/Amsterdam"
 # https://github.com/Secure-Compliance-Solutions-LLC/GVM-Docker/blob/master/scripts/start.sh
 RUN sed -i '$ d' /start.sh
 
-ADD entrypoint.sh scan.py /
+ADD . /
 RUN python3 -m pip install python-gvm\
     && mkdir /var/reports/ \
     && chmod +x /entrypoint.sh
