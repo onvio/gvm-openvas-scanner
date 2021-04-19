@@ -71,36 +71,32 @@ with Gmp(connection, transform=transform) as gmp:
     logging.info('Authenticated')
     
     # Get the base config based on the provided name
-    # config = gmp.get_configs(filter="name=\"{}\"".format(options.scan_config), details=True)
-    # config_xml = etree.tostring(config).decode('utf-8')
-    # config_exists = len(config.xpath("//config")) == 1
-    # if not config_exists:
-    #     logging.error('Selected config "%s" does not exist' % options.scan_config)
-    #     sys.exit()
-    # config_id = config.xpath("//config")[0].get("id")
+    config = gmp.get_configs(filter="name=\"{}\"".format(options.scan_config), details=True)
+    config_exists = len(config.xpath("//config")) == 1
+    if not config_exists:
+        logging.error('Selected config "%s" does not exist' % options.scan_config)
+        sys.exit()
+    config_xml = etree.tostring(config).decode('utf-8')
+    config_id = config.xpath("//config")[0].get("id")
+
+    logging.debug(f"Base config: {config_xml}")
 
     # Sometimes the base config may be corrupt, so take them from the config folder
-    scan_config = options.scan_config.lower()
-    if scan_config == "full and fast":
-        config_path = "full-and-fast-daba56c8-73ec-11df-a475-002264764cea.xml"
-    if scan_config == "base":
-        config_path = "base-d21f6c81-2b88-4ac1-b7b4-a2a9f2ad4663.xml"
+    # scan_config = options.scan_config.lower()
+    # if scan_config == "full and fast":
+    #     config_path = "full-and-fast-daba56c8-73ec-11df-a475-002264764cea.xml"
+    # if scan_config == "base":
+    #     config_path = "base-d21f6c81-2b88-4ac1-b7b4-a2a9f2ad4663.xml"
 
-    f = open(f"/data/data-objects/gvmd/21.04/configs/{config_path}", "r")
-    config_xml = f.read()
+    # f = open(f"/data/data-objects/gvmd/21.04/configs/{config_path}", "r")
+    # config_xml = f.read()
+    # config_xml = f'<get_configs_response status="200" status_text="OK">{config_xml}</get_configs_response>'
+
     # Because gmp.set_nvt_preference does not work.
-    #gmp.modify_config_set_nvt_preference(config_id=config_id, name="TCP ping tries also TCP-SYN ping", nvt_oid="1.3.6.1.4.1.25623.1.0.100315", value="no")
-    config_xml = f'<get_configs_response status="200" status_text="OK">{config_xml}</get_configs_response>'
+    # gmp.modify_config_set_nvt_preference(config_id=config_id, name="TCP ping tries also TCP-SYN ping", nvt_oid="1.3.6.1.4.1.25623.1.0.100315", value="no")
     # Report about unreachable hosts
-    config_xml = config_xml.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>yes</value><default>no</default></preference>')
+    config_xml = config_xml.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value><default>no</default></preference>')
 
-    # Because alive_test on the target did not work (bug in GVM)
-    # https://github.com/greenbone/ospd-openvas/pull/334
-    #config_xml = config_xml.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>2</id><hr_name>TCP ping tries also TCP-SYN ping</hr_name><name>TCP ping tries also TCP-SYN ping</name><type>checkbox</type><value>yes</value><default>no</default></preference>')
-    #config_xml = config_xml.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>1</id><hr_name>Do a TCP ping</hr_name><name>Do a TCP ping</name><type>checkbox</type><value>yes</value><default>no</default></preference>')
-    #if options.consider_alive:
-    #    config_xml = config_xml.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>5</id><hr_name>Mark unrechable Hosts as dead (not scanning)</hr_name><name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>no</value><default>yes</default></preference>')
-    
     # import the new config
     import_config = gmp.import_config(config=config_xml)
     config_id = import_config[0].get("id")
@@ -128,7 +124,7 @@ with Gmp(connection, transform=transform) as gmp:
         credential_id = create_credential.xpath("//create_credential_response")[0].get("id")
         logging.info("Created credential: {}".format(credential_id))
 
-    alive_tests = AliveTest.ICMP_TCP_ACK_SERVICE_AND_ARP_PING
+    alive_tests = AliveTest.TCP_SYN_SERVICE_PING
     if options.consider_alive:
          alive_tests = AliveTest.CONSIDER_ALIVE
     port_list_id = "33d0cd82-57c6-11e1-8ed1-406186ea4fc5" # All IANA assigned TCP
