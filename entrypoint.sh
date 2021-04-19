@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm /usr/local/var/postgres/postmaster.pid
+rm /data/database/postmaster.pid
 rm -rf /data/certs/
 
 /start.sh
@@ -8,6 +8,12 @@ rm -rf /data/certs/
 status=$?
 if [ $status -ne 0 ]; then
     echo "Startup script failed... try again"
+    
+    rm /data/database/postmaster.pid
+    su -c "/usr/lib/postgresql/12/bin/pg_resetwal -f /data/database" postgres
+    kill $(ps aux | grep 'redis-server' | awk '{print $2}')
+    kill $(ps aux | grep 'start.sh' | awk '{print $2}')
+    
     /start.sh
         
     status=$?

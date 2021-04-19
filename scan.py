@@ -17,7 +17,7 @@ usage = "usage: %prog [options] hosts reportname"
 parser = optparse.OptionParser(usage)
 
 parser.add_option('-n', '--no-ping',
-    action="store_false", dest="consider_alive",
+    action="store_true", dest="consider_alive",
     help="Consider all hosts as alive", default=False)
 
 parser.add_option('--ssh-username',
@@ -95,7 +95,7 @@ with Gmp(connection, transform=transform) as gmp:
     # Because gmp.set_nvt_preference does not work.
     # gmp.modify_config_set_nvt_preference(config_id=config_id, name="TCP ping tries also TCP-SYN ping", nvt_oid="1.3.6.1.4.1.25623.1.0.100315", value="no")
     # Report about unreachable hosts
-    config_xml = config_xml.replace('<preferences>', '<preferences><preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value><default>no</default></preference>')
+    config_xml = config_xml.replace('<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value><default>no</default></preference>', '<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value><default>no</default></preference>')
 
     # import the new config
     import_config = gmp.import_config(config=config_xml)
@@ -124,7 +124,7 @@ with Gmp(connection, transform=transform) as gmp:
         credential_id = create_credential.xpath("//create_credential_response")[0].get("id")
         logging.info("Created credential: {}".format(credential_id))
 
-    alive_tests = AliveTest.TCP_SYN_SERVICE_PING
+    alive_tests = AliveTest.ICMP_TCP_ACK_SERVICE_AND_ARP_PING
     if options.consider_alive:
          alive_tests = AliveTest.CONSIDER_ALIVE
     port_list_id = "33d0cd82-57c6-11e1-8ed1-406186ea4fc5" # All IANA assigned TCP
@@ -157,7 +157,8 @@ with Gmp(connection, transform=transform) as gmp:
     logging.info("Started task with report: {}".format(report_id))
 
     progress = 0
-    while progress != -1:
+    status = ""
+    while progress != -1 and status != "Interrupted":
         get_task = gmp.get_task(task_id = task_id)
         status = get_task.xpath("//status")[0].text
         progress = int(get_task.xpath("//progress")[0].text)
