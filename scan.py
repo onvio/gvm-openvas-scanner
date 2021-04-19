@@ -96,9 +96,13 @@ with Gmp(connection, transform=transform) as gmp:
     # gmp.modify_config_set_nvt_preference(config_id=config_id, name="TCP ping tries also TCP-SYN ping", nvt_oid="1.3.6.1.4.1.25623.1.0.100315", value="no")
     # Report about unreachable hosts
     config_xml = config_xml.replace('<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value><default>no</default></preference>', '<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value><default>no</default></preference>')
+    config_xml = config_xml.replace('<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>5</id><hr_name>Mark unrechable Hosts as dead (not scanning)</hr_name><name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>yes</value><default>yes</default></preference>', '<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>5</id><hr_name>Mark unrechable Hosts as dead (not scanning)</hr_name><name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>no</value><default>yes</default></preference>')
 
     # import the new config
     import_config = gmp.import_config(config=config_xml)
+
+    logging.debug(f"Imported config: {etree.tostring(import_config).decode('utf-8')}")
+
     config_id = import_config[0].get("id")
 
     logging.info('Starting scan with config: {}'.format(config_id))
