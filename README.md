@@ -1,5 +1,5 @@
 # gvm-openvas-scanner
-An automated OpenVAS scanner in Docker
+An automated one-liner OpenVAS scanner in Docker
 
 Thanks to [Secure-Compliance](https://github.com/Secure-Compliance-Solutions-LLC/GVM-Docker/) for the base GVM Docker image this script relies on.
 
