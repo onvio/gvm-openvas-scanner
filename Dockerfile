@@ -7,7 +7,9 @@ ENV TZ="Europe/Amsterdam"
 RUN sed -i '$ d' /start.sh
 
 ADD . /
-RUN python3 -m pip install python-gvm\
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+    && python3 get-pip.py \
+    && python3 -m pip install python-gvm\
     && mkdir /var/reports/ \
     && chmod +x /entrypoint.sh
 
