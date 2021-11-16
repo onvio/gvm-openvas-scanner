@@ -1,14 +1,12 @@
 #!/bin/bash
 
-rm /data/database/postmaster.pid
-rm -rf /data/certs/
-
 /start.sh
 
 status=$?
 if [ $status -ne 0 ]; then
     echo "Startup script failed... try again"
     
+    rm -rf /data/certs/
     rm /data/database/postmaster.pid
     su -c "/usr/lib/postgresql/12/bin/pg_resetwal -f /data/database" postgres
     kill $(ps aux | grep 'redis-server' | awk '{print $2}')
