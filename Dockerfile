@@ -1,15 +1,11 @@
-FROM securecompliance/gvm:master
+FROM securecompliance/gvm:debian-master-data-full
 
 ENV TZ="Europe/Amsterdam"
-
-# Remove the last line of start.sh so it doesn't hang on tail -F
-# https://github.com/Secure-Compliance-Solutions-LLC/GVM-Docker/blob/master/scripts/start.sh
-RUN sed -i '$ d' /start.sh
 
 ADD . /
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
     && python3 get-pip.py \
-    && python3 -m pip install python-gvm\
+    && python3 -m pip install python-gvm gvm-tools\
     && mkdir /var/reports/ \
     && chmod +x /entrypoint.sh
 

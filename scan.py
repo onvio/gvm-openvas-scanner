@@ -2,9 +2,9 @@
 
 from gvm.connections import TLSConnection
 from gvm.protocols.gmp import Gmp
-from gvm.protocols.gmpv7.types import SeverityLevel
-from gvm.protocols.gmpv9 import AliveTest
-from gvm.protocols.gmpv9 import CredentialType
+from gvm.protocols.gmpv214 import SeverityLevel
+from gvm.protocols.gmpv214 import AliveTest
+from gvm.protocols.gmpv214 import CredentialType
 from gvm.transforms import EtreeTransform
 import logging
 import os, sys, time, random
@@ -67,43 +67,14 @@ transform = EtreeTransform()
 logging.info('Connecting to GMP')
 
 with Gmp(connection, transform=transform) as gmp:
-    gmp.authenticate('admin', 'admin')
+    gmp.authenticate('admin', 'adminpassword')
     logging.info('Authenticated')
-    
-    # Get the base config based on the provided name
-    config = gmp.get_configs(filter="name=\"{}\"".format(options.scan_config), details=True)
-    config_exists = len(config.xpath("//config")) == 1
-    if not config_exists:
-        logging.error('Selected config "%s" does not exist' % options.scan_config)
-        sys.exit()
-    config_xml = etree.tostring(config).decode('utf-8')
-    config_id = config.xpath("//config")[0].get("id")
 
-    logging.debug(f"Base config: {config_xml}")
+    config_id = "d21f6c81-2b88-4ac1-b7b4-a2a9f2ad4663"
 
-    # Sometimes the base config may be corrupt, so take them from the config folder
-    # scan_config = options.scan_config.lower()
-    # if scan_config == "full and fast":
-    #     config_path = "full-and-fast-daba56c8-73ec-11df-a475-002264764cea.xml"
-    # if scan_config == "base":
-    #     config_path = "base-d21f6c81-2b88-4ac1-b7b4-a2a9f2ad4663.xml"
-
-    # f = open(f"/data/data-objects/gvmd/21.04/configs/{config_path}", "r")
-    # config_xml = f.read()
-    # config_xml = f'<get_configs_response status="200" status_text="OK">{config_xml}</get_configs_response>'
-
-    # Because gmp.set_nvt_preference does not work.
-    # gmp.modify_config_set_nvt_preference(config_id=config_id, name="TCP ping tries also TCP-SYN ping", nvt_oid="1.3.6.1.4.1.25623.1.0.100315", value="no")
-    # Report about unreachable hosts
-    config_xml = config_xml.replace('<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value><default>no</default></preference>', '<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>6</id><hr_name>Report about unrechable Hosts</hr_name><name>Report about unrechable Hosts</name><type>checkbox</type><value>no</value><default>no</default></preference>')
-    config_xml = config_xml.replace('<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>5</id><hr_name>Mark unrechable Hosts as dead (not scanning)</hr_name><name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>yes</value><default>yes</default></preference>', '<preference><nvt oid="1.3.6.1.4.1.25623.1.0.100315"><name>Ping Host</name></nvt><id>5</id><hr_name>Mark unrechable Hosts as dead (not scanning)</hr_name><name>Mark unrechable Hosts as dead (not scanning)</name><type>checkbox</type><value>no</value><default>yes</default></preference>')
-
-    # import the new config
-    import_config = gmp.import_config(config=config_xml)
-
-    logging.debug(f"Imported config: {etree.tostring(import_config).decode('utf-8')}")
-
-    config_id = import_config[0].get("id")
+    scan_config = options.scan_config.lower()
+    if scan_config == "full and fast":
+        config_id = "daba56c8-73ec-11df-a475-002264764cea"
 
     logging.info('Starting scan with config: {}'.format(config_id))
 
@@ -207,7 +178,6 @@ with Gmp(connection, transform=transform) as gmp:
             logging.error(ex)
 
     # Cleanup
-    gmp.delete_config(config_id= config_id, ultimate=True)
     gmp.delete_task(task_id = task_id, ultimate=True)
     gmp.delete_target(target_id = target_id, ultimate=True)
     gmp.delete_report(report_id = report_id)
