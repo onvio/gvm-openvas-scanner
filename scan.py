@@ -132,6 +132,11 @@ try:
                                     config_id = config_id, 
                                     target_id = target_id)
         task_id = create_task.xpath("//create_task_response")[0].get("id")
+
+        if not task_id:
+            logging.error("Could not create task, response: " + etree.tostring(create_task).decode('utf-8'))
+            sys.exit()
+            
         logging.info("Created task: {}".format(task_id))
 
         start_task = gmp.start_task(task_id = task_id)
