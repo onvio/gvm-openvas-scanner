@@ -71,6 +71,9 @@ try:
         gmp.authenticate('admin', 'adminpassword')
         logging.info('Authenticated')
 
+        scan_configs = gmp.get_scan_configs()
+        logging.info("Available scan configs: " + etree.tostring(scan_configs).decode('utf-8'))
+
         config_id = "d21f6c81-2b88-4ac1-b7b4-a2a9f2ad4663"
 
         scan_config = options.scan_config.lower()
@@ -136,7 +139,7 @@ try:
         if not task_id:
             logging.error("Could not create task, response: " + etree.tostring(create_task).decode('utf-8'))
             sys.exit()
-            
+
         logging.info("Created task: {}".format(task_id))
 
         start_task = gmp.start_task(task_id = task_id)
