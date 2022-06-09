@@ -157,7 +157,7 @@ with Gmp(connection, transform=transform) as gmp:
                                     report_format_id=report_format_id, 
                                     details=True, 
                                     ignore_pagination=True,
-                                    filter="apply_overrides=1")
+                                    filter_string="apply_overrides=1")
 
         try:
             if report_format == "pdf":
