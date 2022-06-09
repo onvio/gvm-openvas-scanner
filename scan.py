@@ -55,30 +55,27 @@ if len(args) != 2:
     parser.print_help()
     sys.exit()
 
-hosts = args[0]
-outputfile = args[1]
-
-logging.info('Hosts: {}'.format(hosts))
-logging.info('Outputfile: {}'.format(outputfile))
-
-connection = TLSConnection()
-transform = EtreeTransform()
-
-logging.info('Connecting to GMP')
-
 try:
+    hosts = args[0]
+    outputfile = args[1]
+
+    logging.info('Hosts: {}'.format(hosts))
+    logging.info('Outputfile: {}'.format(outputfile))
+
+    connection = TLSConnection()
+    transform = EtreeTransform()
+
+    logging.info('Connecting to GMP')
+    
     with Gmp(connection, transform=transform) as gmp:
         gmp.authenticate('admin', 'adminpassword')
         logging.info('Authenticated')
 
-        scan_configs = gmp.get_scan_configs()
-        logging.info("Available scan configs: " + etree.tostring(scan_configs).decode('utf-8'))
-
-        config_id = "d21f6c81-2b88-4ac1-b7b4-a2a9f2ad4663"
+        config_id = "d21f6c81-2b88-4ac1-b7b4-a2a9f2ad4663" # Base
 
         scan_config = options.scan_config.lower()
         if scan_config == "full and fast":
-            config_id = "daba56c8-73ec-11df-a475-002264764cea"
+            config_id = "daba56c8-73ec-11df-a475-002264764cea" # Full and Fast
 
         logging.info('Starting scan with config: {}'.format(config_id))
 
