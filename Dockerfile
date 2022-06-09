@@ -3,6 +3,7 @@ FROM securecompliance/gvm:debian-master-data-full
 ENV TZ="Europe/Amsterdam"
 
 RUN sed -i '39 d' /opt/setup/scripts/entrypoint.sh
+RUN sed -i '355 d' /opt/setup/scripts/start.sh
 
 ADD . /
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \

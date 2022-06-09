@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export SUPVISD=${SUPVISD:-supervisorctl}
+export SETUP=1
 
 echo "Starting entrypoint"
 
