@@ -1,7 +1,7 @@
 # gvm-openvas-scanner
 An automated one-liner OpenVAS scanner in Docker
 
-Thanks to [Secure-Compliance](https://github.com/Secure-Compliance-Solutions-LLC/GVM-Docker/) for the base GVM Docker image this script relies on.
+Thanks to [Secure-Compliance](https://github.com/Secure-Compliance-Solutions-LLC/GVM-Docker/) for the base GVM Docker image this script relies on (`gvm-docker:debian-master-data-full`).
 
 # Usage
 Run:
@@ -41,4 +41,4 @@ To access the webinterface run, for example to debug the scans:
 * 9390 = GMP Protocol for scanscript
 * 5432 = Postgres database
 
-*Warning* the user created is admin/admin so beware when you expose ports. The database uses default credentials as well.
+*Warning* the user created is admin/adminpassword so beware when you expose ports. The database uses default credentials as well (password none).
